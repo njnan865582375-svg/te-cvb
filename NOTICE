@@ -1,0 +1,19 @@
+TE cvb includes third-party components:
+
+1. Shizuku API / provider / AIDL / shared
+   Copyright (c) RikkaApps and contributors
+   Licensed under the Apache License, Version 2.0
+   https://github.com/RikkaApps/Shizuku-API
+   https://www.apache.org/licenses/LICENSE-2.0
+
+2. JSch 0.2.26 (mwiede fork)
+   Copyright (c) 2002-2018 Atsuhiko Yamanaka, JCraft,Inc.
+   Copyright (c) 2018-2026 mwiede and contributors
+   Revised BSD License; bundled JZlib (BSD) and jBCrypt (ISC)
+   https://github.com/mwiede/jsch
+   https://github.com/mwiede/jsch/blob/master/LICENSE.txt
+
+The file libs/jsch-0.2.26-android.jar is a repackaged copy of the
+JSch 0.2.26 JAR with Java multi-release metadata removed so that it can be
+consumed by older Android D8 versions. It is distributed under the same
+Revised BSD License.

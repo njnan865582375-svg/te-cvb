@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TE cvb</string>
+    <string name="accessibility_label">TE cvb 锁机</string>
+    <string name="accessibility_description">在锁机时显示全屏锁定层，阻止通过 Home 键、上滑手势或最近任务离开。只有输入正确解锁码才会退出。仅在你主动开始锁机时生效。</string>
+</resources>

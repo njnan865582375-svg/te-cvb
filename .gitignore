@@ -1,0 +1,25 @@
+# Build output
+build/
+build*/
+out/
+*.apk
+*.idsig
+
+# Signing material
+keystore/
+*.jks
+*.keystore
+
+# Local IDE / SDK
+local.properties
+.gradle/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs and backups
+*.log
+*.bak
+*.orig
+*.rej
