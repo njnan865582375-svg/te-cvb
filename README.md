@@ -68,7 +68,7 @@ adb shell dpm remove-active-admin com.dsh.lock/.AdminReceiver
 
 - JDK 8+（推荐 17）
 - Android SDK Platform 30
-- Android Build-Tools 30.0.3 和 34.0.0（34 的 d8 用于 JSch 0.2.26）
+- Android Build-Tools 30.0.3 和 36.0.0（36 的 d8 用于 JSch 0.2.26）
 - Python 3
 
 ```bash

@@ -8,13 +8,21 @@ SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}"
 PLATFORM="$SDK/platforms/android-30/android.jar"
 BT30="$SDK/build-tools/30.0.3"
 BT34="$SDK/build-tools/34.0.0"
-AAPT="$BT30/aapt"
-ZIPALIGN="$BT30/zipalign"
+if command -v aapt >/dev/null 2>&1; then
+  AAPT="$(command -v aapt)"
+else
+  AAPT="$BT30/aapt"
+fi
+if command -v zipalign >/dev/null 2>&1; then
+  ZIPALIGN="$(command -v zipalign)"
+else
+  ZIPALIGN="$BT30/zipalign"
+fi
 
-if [ -x "$BT34/d8" ]; then
-  D8="$BT34/d8"
-elif [ -x "$SDK/build-tools/36.0.0/d8" ]; then
+if [ -x "$SDK/build-tools/36.0.0/d8" ]; then
   D8="$SDK/build-tools/36.0.0/d8"
+elif [ -x "$BT34/d8" ]; then
+  D8="$BT34/d8"
 else
   D8="$BT30/d8"
 fi
