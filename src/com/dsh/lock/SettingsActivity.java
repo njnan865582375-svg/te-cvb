@@ -59,7 +59,7 @@ public final class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         TextView version = new TextView(this);
-        version.setText("TE cvb 3.9");
+        version.setText(versionLabel());
         version.setTextColor(0xFF636366);
         version.setTextSize(11);
         version.setGravity(Gravity.CENTER);
@@ -68,6 +68,18 @@ public final class SettingsActivity extends Activity {
 
         buildRows();
         setContentView(root);
+    }
+
+    /** 从清单里读，改版本号只需要动 AndroidManifest，不会再忘了改这两处。 */
+    private String versionLabel() {
+        try {
+            android.content.pm.PackageInfo info = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            String name = info.versionName;
+            return name == null || name.length() == 0 ? "TE cvb" : "TE cvb " + name;
+        } catch (Exception exception) {
+            return "TE cvb";
+        }
     }
 
     private View buildHeader() {
