@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 
+import java.util.Collections;
+
 public final class KioskController {
     private KioskController() {
     }
@@ -42,6 +44,15 @@ public final class KioskController {
             }
             manager.setStatusBarDisabled(admin, true);
             manager.setUninstallBlocked(admin, pkg, true);
+            try {
+                manager.setPermittedAccessibilityServices(admin,
+                        Collections.singletonList(pkg));
+            } catch (Throwable ignored) {
+            }
+            try {
+                manager.setScreenCaptureDisabled(admin, true);
+            } catch (Throwable ignored) {
+            }
 
             IntentFilter filter = new IntentFilter(Intent.ACTION_MAIN);
             filter.addCategory(Intent.CATEGORY_HOME);
@@ -73,6 +84,14 @@ public final class KioskController {
             manager.clearPackagePersistentPreferredActivities(admin, pkg);
             manager.setLockTaskPackages(admin, new String[]{});
             manager.setUninstallBlocked(admin, pkg, false);
+            try {
+                manager.setPermittedAccessibilityServices(admin, null);
+            } catch (Throwable ignored) {
+            }
+            try {
+                manager.setScreenCaptureDisabled(admin, false);
+            } catch (Throwable ignored) {
+            }
         } catch (Throwable ignored) {
         }
     }

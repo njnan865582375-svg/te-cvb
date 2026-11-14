@@ -392,7 +392,7 @@ public final class MainActivity extends Activity {
             return;
         }
         AppDialogs.confirm(this, "设备所有者锁机",
-                "开启后会：\n\n• 把 TE cvb 设为桌面\n• 禁用状态栏和通知栏\n• 锁定 Home / 最近任务\n• 阻止卸载\n• 重启后继续锁\n\n退出只能输入密码；卸载需要 ADB 取消设备所有者。确认开启？",
+                "开启后会：\n\n• 把 TE cvb 设为桌面\n• 禁用状态栏和通知栏\n• 锁定 Home / 最近任务\n• 阻止卸载\n• 只允许 TE cvb 的无障碍服务\n• 禁止截屏/录屏\n• 重启后继续锁\n\n退出只能输入密码；卸载需要 ADB 取消设备所有者。确认开启？",
                 "取消", "开启锁机", new AppDialogs.OnClick() {
                     @Override
                     public void onClick() {
