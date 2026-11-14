@@ -36,6 +36,8 @@ adb shell dpm set-device-owner com.dsh.lock/.AdminReceiver
 
 5. 打开 TE cvb → 模式 → 设备所有者锁机
 
+强力模式会额外限制安全模式、恢复出厂、ADB、未知来源安装；密码忘记时很难救援，只在测试机上使用。
+
 彻底移除：
 
 ```bash

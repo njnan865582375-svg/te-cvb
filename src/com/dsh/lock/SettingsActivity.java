@@ -59,7 +59,7 @@ public final class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         TextView version = new TextView(this);
-        version.setText("TE cvb 3.5");
+        version.setText("TE cvb 3.6");
         version.setTextColor(0xFF636366);
         version.setTextSize(11);
         version.setGravity(Gravity.CENTER);
@@ -145,6 +145,14 @@ public final class SettingsActivity extends Activity {
                     @Override
                     public void onClick(View view) {
                         startActivity(new Intent(SettingsActivity.this, AppPickerActivity.class));
+                    }
+                }, true);
+
+        addTextRow("安全自测", "检查 BL / ADB / 权限 / 设备所有者",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        startActivity(new Intent(SettingsActivity.this, SelfTestActivity.class));
                     }
                 }, true);
 
