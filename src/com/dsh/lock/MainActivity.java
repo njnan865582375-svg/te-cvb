@@ -379,9 +379,6 @@ public final class MainActivity extends Activity {
     }
 
     private void startLockNow(int mode) {
-        if (mode != LockModes.OVERLAY) {
-            LockGuardService.start(this);
-        }
         if (mode == LockModes.NORMAL) {
             enterScreenPinLock(mode);
         } else if (mode == LockModes.ACCESSIBILITY) {

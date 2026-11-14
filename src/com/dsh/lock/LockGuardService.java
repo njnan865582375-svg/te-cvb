@@ -89,18 +89,18 @@ public final class LockGuardService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_START : intent.getAction();
+        try {
+            startForeground(NOTIF_GUARD, buildGuardNotification());
+        } catch (Exception exception) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (ACTION_STOP.equals(action) || !LockPrefs.isLocked(this)) {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
         }
-        try {
-            startForeground(NOTIF_GUARD, buildGuardNotification());
-            return START_STICKY;
-        } catch (Exception exception) {
-            stopSelf();
-            return START_NOT_STICKY;
-        }
+        return START_STICKY;
     }
 
     private Notification buildGuardNotification() {
