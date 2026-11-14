@@ -58,6 +58,11 @@ public final class RemoteActivity extends Activity {
     private Switch serviceSwitch;
     private TextView serviceStatus;
     private TextView testStatus;
+    private LinearLayout pairCodeBlock;
+    private LinearLayout targetCodeBlock;
+    private TextView pairCodeView;
+    private EditText targetCodeField;
+    private TextView hostKeyView;
 
     private final Map<String, RemoteSsh.Device> online = new HashMap<>();
 
@@ -91,6 +96,8 @@ public final class RemoteActivity extends Activity {
         content.addView(buildServerCard());
         content.addView(sectionLabel("登录方式"));
         content.addView(buildAuthCard());
+        content.addView(sectionLabel("安全"));
+        content.addView(buildSecurityCard());
         content.addView(buildActionButtons());
         testStatus = new TextView(this);
         testStatus.setTextColor(COLOR_MUTED);
@@ -262,6 +269,110 @@ public final class RemoteActivity extends Activity {
         }
         card.addView(keyBlock);
         return card;
+    }
+
+    private View buildSecurityCard() {
+        LinearLayout card = card();
+
+        // 被控端：展示自己的配对码
+        pairCodeBlock = new LinearLayout(this);
+        pairCodeBlock.setOrientation(LinearLayout.VERTICAL);
+        TextView pairLabel = new TextView(this);
+        pairLabel.setText("配对码");
+        pairLabel.setTextColor(COLOR_TEXT);
+        pairLabel.setTextSize(13);
+        pairCodeBlock.addView(pairLabel);
+        pairCodeView = new TextView(this);
+        pairCodeView.setText(RemotePrefs.getPairCode(this));
+        pairCodeView.setTextColor(COLOR_TEXT);
+        pairCodeView.setTextSize(30);
+        pairCodeView.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+        pairCodeView.setPadding(0, dp(4), 0, dp(4));
+        pairCodeBlock.addView(pairCodeView);
+        TextView pairHint = new TextView(this);
+        pairHint.setText("把这 6 位数字告诉控制端。控制端填了它，发来的请求才会显示“已配对”。");
+        pairHint.setTextColor(COLOR_MUTED);
+        pairHint.setTextSize(11.5f);
+        pairHint.setPadding(0, 0, 0, dp(6));
+        pairCodeBlock.addView(pairHint);
+        TextView renew = pill("换一个配对码", false);
+        renew.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String code = RemotePrefs.regeneratePairCode(RemoteActivity.this);
+                if (pairCodeView != null) {
+                    pairCodeView.setText(code);
+                }
+                Toast.makeText(RemoteActivity.this, "配对码已更新，控制端需要填新的", Toast.LENGTH_SHORT).show();
+            }
+        });
+        pairCodeBlock.addView(renew, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        card.addView(pairCodeBlock);
+
+        // 控制端：填对方的配对码
+        targetCodeBlock = new LinearLayout(this);
+        targetCodeBlock.setOrientation(LinearLayout.VERTICAL);
+        targetCodeField = field("对方设备的 6 位配对码", false);
+        targetCodeField.setInputType(InputType.TYPE_CLASS_NUMBER);
+        targetCodeField.setText(RemotePrefs.getTargetCode(this));
+        targetCodeBlock.addView(fieldBlock("对方配对码", targetCodeField));
+        TextView targetHint = new TextView(this);
+        targetHint.setText("填了以后，请求会带上签名，对方能看出是你发的。不填也能发，但对方会看到“未配对”。");
+        targetHint.setTextColor(COLOR_MUTED);
+        targetHint.setTextSize(11.5f);
+        targetHint.setPadding(0, dp(6), 0, 0);
+        targetCodeBlock.addView(targetHint);
+        targetCodeBlock.setPadding(dp(0), dp(12), 0, 0);
+        card.addView(targetCodeBlock);
+
+        // 主机指纹
+        hostKeyView = new TextView(this);
+        hostKeyView.setTextColor(COLOR_MUTED);
+        hostKeyView.setTextSize(11.5f);
+        hostKeyView.setPadding(dp(0), dp(14), 0, dp(6));
+        card.addView(hostKeyView);
+
+        TextView clearHost = pill("清除主机指纹", false);
+        clearHost.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                RemotePrefs.clearHostKey(RemoteActivity.this);
+                refreshSecurityUi();
+                Toast.makeText(RemoteActivity.this,
+                        "已清除，下次连接会重新记录服务器公钥", Toast.LENGTH_SHORT).show();
+            }
+        });
+        card.addView(clearHost, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+
+        if (!SecretVault.isAvailable()) {
+            TextView warn = new TextView(this);
+            warn.setText("注意：系统密钥库不可用，SSH 密码只能以弱加密形式保存。");
+            warn.setTextColor(0xFFFF9F0A);
+            warn.setTextSize(11.5f);
+            warn.setPadding(0, dp(10), 0, 0);
+            card.addView(warn);
+        }
+        refreshSecurityUi();
+        return card;
+    }
+
+    private void refreshSecurityUi() {
+        if (pairCodeBlock != null) {
+            pairCodeBlock.setVisibility(
+                    role == RemotePrefs.ROLE_CONTROLLED ? View.VISIBLE : View.GONE);
+        }
+        if (targetCodeBlock != null) {
+            targetCodeBlock.setVisibility(
+                    role == RemotePrefs.ROLE_CONTROLLER ? View.VISIBLE : View.GONE);
+        }
+        if (hostKeyView != null) {
+            String shortKey = RemotePrefs.hostKeyShort(RemoteActivity.this);
+            hostKeyView.setText(shortKey.length() == 0
+                    ? "主机指纹：尚未记录（首次连接成功后自动记录）"
+                    : "主机指纹：" + shortKey + "\n服务器公钥变了会拒绝连接，确认换过密钥再清除。");
+        }
     }
 
     private View buildActionButtons() {
@@ -441,6 +552,7 @@ public final class RemoteActivity extends Activity {
             controlledSection.setVisibility(
                     role == RemotePrefs.ROLE_CONTROLLED ? View.VISIBLE : View.GONE);
         }
+        refreshSecurityUi();
     }
 
     private void setAuthUi() {
@@ -510,6 +622,14 @@ public final class RemoteActivity extends Activity {
         if (RemotePrefs.isServiceEnabled(this) && role == RemotePrefs.ROLE_CONTROLLER) {
             stopService(new Intent(this, RemoteService.class));
             RemotePrefs.setServiceEnabled(this, false);
+        }
+        if (targetCodeField != null) {
+            String target = targetCodeField.getText().toString().trim();
+            if (target.length() > 0 && !target.matches("[0-9]{4,12}")) {
+                Toast.makeText(this, "配对码是 4-12 位数字", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            RemotePrefs.setTargetCode(this, target);
         }
         RemotePrefs.save(this, name, host, port, user, auth, secret, key, role);
         return true;

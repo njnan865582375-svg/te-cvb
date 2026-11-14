@@ -24,6 +24,7 @@ public final class RemoteApprovalActivity extends Activity {
 
     private String requestId;
     private String from;
+    private boolean verified;
     private TextView status;
 
     @Override
@@ -31,6 +32,7 @@ public final class RemoteApprovalActivity extends Activity {
         super.onCreate(savedInstanceState);
         requestId = getIntent().getStringExtra("request_id");
         from = getIntent().getStringExtra("request_from");
+        verified = getIntent().getBooleanExtra("request_verified", false);
         if (requestId == null) {
             String pending = RemotePrefs.getPending(this);
             if (pending != null) {
@@ -38,6 +40,7 @@ public final class RemoteApprovalActivity extends Activity {
                     JSONObject object = new JSONObject(pending);
                     requestId = object.optString("id", null);
                     from = object.optString("from", "控制端");
+                    verified = object.optBoolean("verified", false);
                 } catch (Exception ignored) {
                 }
             }
@@ -72,7 +75,9 @@ public final class RemoteApprovalActivity extends Activity {
         card.addView(title);
 
         TextView message = new TextView(this);
-        message.setText(from + " 请求锁住这台设备。\\n\\n同意后，这台设备会立即进入锁机状态，需要你自己的解锁密码才能退出。");
+        message.setText(verified
+                ? from + " 请求锁住这台设备，来源已通过配对码校验。\n\n同意后，这台设备会立即进入锁机状态，需要你自己的解锁密码才能退出。"
+                : from + " 请求锁住这台设备。\n\n注意：这条请求没有通过配对码校验，可能来自别的设备或服务器上的其他人。确认是信任的人再同意。");
         message.setTextColor(COLOR_MUTED);
         message.setTextSize(14);
         message.setLineSpacing(dp(3), 1f);
@@ -100,7 +105,7 @@ public final class RemoteApprovalActivity extends Activity {
         denyParams.rightMargin = dp(10);
         buttons.addView(deny, denyParams);
 
-        TextView approve = button("同意并锁机", true);
+        TextView approve = button(verified ? "同意并锁机" : "仍然同意并锁机", true);
         approve.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

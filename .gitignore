@@ -23,3 +23,6 @@ Thumbs.db
 *.bak
 *.orig
 *.rej
+
+# Local source backups
+.backup-*/

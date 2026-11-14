@@ -18,9 +18,14 @@ public final class RemoteService extends Service {
     private static final int NOTIFICATION_SERVICE = 3101;
     private static final int NOTIFICATION_REQUEST = 3102;
 
+    /** 一分钟内最多弹出的请求通知数，防止别人刷请求把手机轰炸死。 */
+    private static final int MAX_NOTIFICATIONS_PER_MINUTE = 3;
+
     private volatile boolean running;
     private Thread worker;
     private String lastNotified = "";
+    private long windowStart;
+    private int windowCount;
 
     @Override
     public void onCreate() {
@@ -57,12 +62,16 @@ public final class RemoteService extends Service {
                 if (request != null && !request.id.equals(lastNotified)) {
                     lastNotified = request.id;
                     RemotePrefs.setLastRequestId(this, request.id);
+                    RemotePrefs.rememberRequest(this, request.id);
                     JSONObject pending = new JSONObject();
                     pending.put("id", request.id);
                     pending.put("from", request.from);
                     pending.put("time", request.time);
+                    pending.put("verified", request.verified);
                     RemotePrefs.setPending(this, pending.toString());
-                    notifyRequest(request);
+                    if (allowNotification()) {
+                        notifyRequest(request);
+                    }
                 }
             } catch (Exception ignored) {
             }
@@ -74,10 +83,25 @@ public final class RemoteService extends Service {
         }
     }
 
+    /** 滑动窗口限速：超额就吞掉通知，请求本身仍记录在 pending 里。 */
+    private boolean allowNotification() {
+        long now = System.currentTimeMillis();
+        if (now - windowStart > 60_000L) {
+            windowStart = now;
+            windowCount = 0;
+        }
+        if (windowCount >= MAX_NOTIFICATIONS_PER_MINUTE) {
+            return false;
+        }
+        windowCount++;
+        return true;
+    }
+
     private void notifyRequest(RemoteSsh.Request request) {
         Intent intent = new Intent(this, RemoteApprovalActivity.class);
         intent.putExtra("request_id", request.id);
         intent.putExtra("request_from", request.from);
+        intent.putExtra("request_verified", request.verified);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, request.id.hashCode(), intent,

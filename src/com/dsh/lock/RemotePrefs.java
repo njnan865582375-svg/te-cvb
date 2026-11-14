@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 public final class RemotePrefs {
@@ -32,6 +34,15 @@ public final class RemotePrefs {
     private static final String KEY_SELECTED_NAME = "selected_name";
     private static final String KEY_SELECTED_IDS = "selected_ids";
     private static final String KEY_SAVED = "saved_devices";
+
+    /** 被控端出示的配对码；控制端要填同一串，请求才会被标成"已配对"。 */
+    private static final String KEY_PAIR_CODE = "pair_code";
+    /** 控制端记录的对方配对码，用来给请求签名。 */
+    private static final String KEY_TARGET_CODE = "target_code";
+    /** 已确认过的主机公钥指纹（TOFU），格式 <算法> <base64 sha256>。 */
+    private static final String KEY_HOST_KEY = "host_key";
+    /** 最近处理过的请求 ID，用于防重放。 */
+    private static final String KEY_SEEN = "seen_requests";
 
     private RemotePrefs() {
     }
@@ -68,11 +79,22 @@ public final class RemotePrefs {
         return p(context).getInt(KEY_AUTH, AUTH_PASSWORD);
     }
 
+    /** 解密后的 SSH 密码；落盘时由 SecretVault 加密。 */
     public static String getSecret(Context context) {
+        return SecretVault.open(rawSecret(context));
+    }
+
+    /** 落盘的原始（密文）值，只在快照回滚时需要。 */
+    private static String rawSecret(Context context) {
         return p(context).getString(KEY_SECRET, "");
     }
 
+    /** 解密后的 SSH 私钥内容。 */
     public static String getKey(Context context) {
+        return SecretVault.open(rawKey(context));
+    }
+
+    private static String rawKey(Context context) {
         return p(context).getString(KEY_KEY, "");
     }
 
@@ -84,12 +106,28 @@ public final class RemotePrefs {
                 .putInt(KEY_PORT, port)
                 .putString(KEY_USER, user)
                 .putInt(KEY_AUTH, auth)
-                .putString(KEY_SECRET, secret)
-                .putString(KEY_KEY, key)
+                .putString(KEY_SECRET, SecretVault.seal(secret))
+                .putString(KEY_KEY, SecretVault.seal(key))
                 .putInt(KEY_ROLE, role)
                 .apply();
     }
 
+    /** 敏感字段是否已经加密落盘（false 表示 Keystore 不可用或还是旧明文）。 */
+    public static boolean isSecretEncrypted(Context context) {
+        String secret = rawSecret(context);
+        String key = rawKey(context);
+        boolean anyStored = secret.length() > 0 || key.length() > 0;
+        if (!anyStored) {
+            return true;
+        }
+        return !SecretVault.isLegacyPlaintext(secret) && !SecretVault.isLegacyPlaintext(key)
+                && SecretVault.isAvailable();
+    }
+
+    /**
+     * 快照用于"保存失败就回滚"。敏感字段保留的是密文原文，
+     * 因此快照本身不含可读密码，且回滚后仍能正常解密。
+     */
     public static String snapshot(Context context) {
         try {
             JSONObject object = new JSONObject();
@@ -99,8 +137,8 @@ public final class RemotePrefs {
             object.put("port", getPort(context));
             object.put("user", getUser(context));
             object.put("auth", getAuth(context));
-            object.put("secret", getSecret(context));
-            object.put("key", getKey(context));
+            object.put("secret_sealed", rawSecret(context));
+            object.put("key_sealed", rawKey(context));
             return object.toString();
         } catch (Exception exception) {
             return "{}";
@@ -113,15 +151,22 @@ public final class RemotePrefs {
         }
         try {
             JSONObject object = new JSONObject(snapshot);
-            save(context,
-                    object.optString("name", ""),
-                    object.optString("host", ""),
-                    object.optInt("port", 22),
-                    object.optString("user", ""),
-                    object.optInt("auth", AUTH_PASSWORD),
-                    object.optString("secret", ""),
-                    object.optString("key", ""),
-                    object.optInt("role", ROLE_CONTROLLER));
+            SharedPreferences.Editor editor = p(context).edit();
+            editor.putString(KEY_NAME, object.optString("name", ""));
+            editor.putString(KEY_HOST, object.optString("host", ""));
+            editor.putInt(KEY_PORT, object.optInt("port", 22));
+            editor.putString(KEY_USER, object.optString("user", ""));
+            editor.putInt(KEY_AUTH, object.optInt("auth", AUTH_PASSWORD));
+            if (object.has("secret_sealed")) {
+                editor.putString(KEY_SECRET, object.optString("secret_sealed", ""));
+                editor.putString(KEY_KEY, object.optString("key_sealed", ""));
+            } else {
+                // 兼容旧快照：里面可能是明文，重新封装后再落盘
+                editor.putString(KEY_SECRET, SecretVault.seal(object.optString("secret", "")));
+                editor.putString(KEY_KEY, SecretVault.seal(object.optString("key", "")));
+            }
+            editor.putInt(KEY_ROLE, object.optInt("role", ROLE_CONTROLLER));
+            editor.apply();
         } catch (Exception ignored) {
         }
     }
@@ -275,5 +320,112 @@ public final class RemotePrefs {
         } catch (Exception ignored) {
         }
         return false;
+    }
+
+    // ---- 配对码 / 主机指纹 / 防重放 ------------------------------------
+
+    /** 被控端的配对码，第一次取用时生成 6 位数字。 */
+    public static String getPairCode(Context context) {
+        String code = p(context).getString(KEY_PAIR_CODE, "");
+        if (code.length() == 0) {
+            code = newPairCode();
+            p(context).edit().putString(KEY_PAIR_CODE, code).apply();
+        }
+        return code;
+    }
+
+    public static String regeneratePairCode(Context context) {
+        String code = newPairCode();
+        p(context).edit().putString(KEY_PAIR_CODE, code).apply();
+        return code;
+    }
+
+    private static String newPairCode() {
+        SecureRandom random = new SecureRandom();
+        int value = 100000 + random.nextInt(900000);
+        return String.valueOf(value);
+    }
+
+    public static String getTargetCode(Context context) {
+        return p(context).getString(KEY_TARGET_CODE, "");
+    }
+
+    public static void setTargetCode(Context context, String code) {
+        p(context).edit().putString(KEY_TARGET_CODE, code == null ? "" : code.trim()).apply();
+    }
+
+    public static String getHostKey(Context context) {
+        return p(context).getString(KEY_HOST_KEY, "");
+    }
+
+    public static void setHostKey(Context context, String fingerprint) {
+        p(context).edit().putString(KEY_HOST_KEY, fingerprint == null ? "" : fingerprint).apply();
+    }
+
+    public static void clearHostKey(Context context) {
+        p(context).edit().remove(KEY_HOST_KEY).apply();
+    }
+
+    /** 记一个已处理过的请求 ID，只保留最近 32 个。 */
+    public static void rememberRequest(Context context, String id) {
+        if (id == null || id.length() == 0) {
+            return;
+        }
+        JSONArray array = seenRequests(context);
+        JSONArray next = new JSONArray();
+        try {
+            next.put(id);
+            for (int i = 0; i < array.length() && next.length() < 32; i++) {
+                String value = array.getString(i);
+                if (!id.equals(value)) {
+                    next.put(value);
+                }
+            }
+            p(context).edit().putString(KEY_SEEN, next.toString()).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static boolean hasSeenRequest(Context context, String id) {
+        JSONArray array = seenRequests(context);
+        try {
+            for (int i = 0; i < array.length(); i++) {
+                if (id.equals(array.getString(i))) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private static JSONArray seenRequests(Context context) {
+        try {
+            return new JSONArray(p(context).getString(KEY_SEEN, "[]"));
+        } catch (Exception exception) {
+            return new JSONArray();
+        }
+    }
+
+    /** 主机公钥的短指纹，给 UI 显示用。 */
+    public static String hostKeyShort(Context context) {
+        String stored = getHostKey(context);
+        if (stored.length() == 0) {
+            return "";
+        }
+        int space = stored.indexOf(' ');
+        String hash = space >= 0 ? stored.substring(space + 1) : stored;
+        String cleaned = hash.replace("+", "").replace("/", "").replace("=", "");
+        return cleaned.length() <= 16 ? cleaned : cleaned.substring(0, 16);
+    }
+
+    static String sha256Base64(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return android.util.Base64.encodeToString(digest.digest(data),
+                    android.util.Base64.NO_WRAP);
+        } catch (Exception exception) {
+            return "";
+        }
     }
 }
