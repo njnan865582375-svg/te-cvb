@@ -627,6 +627,7 @@ public final class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         applyUnlockedUi();
         finish();
     }
@@ -650,12 +651,14 @@ public final class MainActivity extends Activity {
                 lockView.showHome();
             }
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
             applyUnlockedUi();
         }
     }
 
     private void applyLockedUi() {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         applySystemBars(true);
     }
 
