@@ -39,6 +39,8 @@ public final class MainActivity extends Activity {
     private int pendingMode = LockModes.UNSET;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
+    private Shizuku.OnBinderDeadListener binderDeadListener;
+
     private final Shizuku.OnRequestPermissionResultListener shizukuListener =
             new Shizuku.OnRequestPermissionResultListener() {
                 @Override
@@ -131,6 +133,9 @@ public final class MainActivity extends Activity {
             }
             lockView.showLockedImmediately();
             applyLockedUi();
+            if (savedMode != LockModes.OVERLAY) {
+                LockGuardService.start(this);
+            }
             if ((savedMode == LockModes.KIOSK || savedMode == LockModes.KIOSK_STRONG)
                     && KioskController.isDeviceOwner(this)) {
                 KioskController.enter(this, savedMode == LockModes.KIOSK_STRONG);
@@ -152,6 +157,18 @@ public final class MainActivity extends Activity {
 
         try {
             Shizuku.addRequestPermissionResultListener(shizukuListener);
+        } catch (Throwable ignored) {
+        }
+        try {
+            binderDeadListener = new Shizuku.OnBinderDeadListener() {
+                @Override
+                public void onBinderDead() {
+                    if (LockPrefs.isLocked(MainActivity.this)) {
+                        LockGuardService.notifyShizukuLost(MainActivity.this);
+                    }
+                }
+            };
+            Shizuku.addBinderDeadListener(binderDeadListener);
         } catch (Throwable ignored) {
         }
         lockView.requestApplyInsets();
@@ -362,6 +379,9 @@ public final class MainActivity extends Activity {
     }
 
     private void startLockNow(int mode) {
+        if (mode != LockModes.OVERLAY) {
+            LockGuardService.start(this);
+        }
         if (mode == LockModes.NORMAL) {
             enterScreenPinLock(mode);
         } else if (mode == LockModes.ACCESSIBILITY) {
@@ -406,6 +426,7 @@ public final class MainActivity extends Activity {
                         }
                         locked = true;
                         LockPrefs.setLocked(MainActivity.this, true, mode);
+                        LockGuardService.start(MainActivity.this);
                         lockView.enterLock();
                         applyLockedUi();
                         if (!KioskController.enter(MainActivity.this, strong)) {
@@ -426,6 +447,7 @@ public final class MainActivity extends Activity {
         }
         locked = true;
         LockPrefs.setLocked(this, true, mode);
+        LockGuardService.start(this);
         lockView.enterLock();
         applyLockedUi();
         try {
@@ -440,6 +462,7 @@ public final class MainActivity extends Activity {
         }
         LockPrefs.setLocked(this, true, mode);
         locked = true;
+        LockGuardService.start(this);
         LockAccessibilityService service = LockAccessibilityService.getInstance();
         if (service != null && service.showLockOverlay()) {
             finishAndRemoveTask();
@@ -627,6 +650,7 @@ public final class MainActivity extends Activity {
         });
         locked = false;
         LockPrefs.clearLock(this);
+        LockGuardService.stop(this);
         try {
             stopLockTask();
         } catch (Exception ignored) {
@@ -723,6 +747,12 @@ public final class MainActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         try {
             Shizuku.removeRequestPermissionResultListener(shizukuListener);
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (binderDeadListener != null) {
+                Shizuku.removeBinderDeadListener(binderDeadListener);
+            }
         } catch (Throwable ignored) {
         }
         super.onDestroy();

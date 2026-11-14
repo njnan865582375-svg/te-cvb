@@ -169,6 +169,7 @@ public final class OverlayLockService extends Service {
         }
         hideLockOverlay();
         LockPrefs.clearLock(this);
+        LockGuardService.stop(this);
         if (LockPrefs.isFloatingEnabled(this)) {
             showFloatingButton();
             updateNotification("悬浮锁机按钮已开启");

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.dsh.lock"
-    android:versionCode="29"
-    android:versionName="3.7">
+    android:versionCode="30"
+    android:versionName="3.8">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="30" />
 
@@ -48,6 +48,11 @@
             android:enabled="true"
             android:exported="true"
             android:multiprocess="false" />
+
+        <service
+            android:name=".LockGuardService"
+            android:exported="false"
+            android:stopWithTask="false" />
 
         <service
             android:name=".OverlayLockService"
@@ -121,6 +126,7 @@
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"

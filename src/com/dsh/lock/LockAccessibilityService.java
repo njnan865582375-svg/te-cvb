@@ -140,6 +140,7 @@ public final class LockAccessibilityService extends AccessibilityService {
             windowManager.addView(view, params);
             lockView = view;
             overlayShowing = true;
+            LockGuardService.start(this);
 
             int storedMode = LockPrefs.getLockMode(this);
             if (!LockModes.usesAccessibility(storedMode)) {
@@ -162,6 +163,7 @@ public final class LockAccessibilityService extends AccessibilityService {
         final int shellMode = LockPrefs.getShellMode(this) == -1
                 ? mode : LockPrefs.getShellMode(this);
         LockPrefs.clearLock(this);
+        LockGuardService.stop(this);
         final Runnable finish = new Runnable() {
             @Override
             public void run() {
