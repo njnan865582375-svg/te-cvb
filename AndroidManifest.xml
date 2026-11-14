@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.dsh.lock"
-    android:versionCode="31"
-    android:versionName="4.0">
+    android:versionCode="32"
+    android:versionName="4.1">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="30" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -29,6 +30,17 @@
         <meta-data
             android:name="moe.shizuku.client.V3_SUPPORT"
             android:value="true" />
+
+        <receiver
+            android:name=".GuardReceiver"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".AdminReceiver"

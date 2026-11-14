@@ -3,6 +3,7 @@ package com.dsh.lock;
 import android.accessibilityservice.AccessibilityService;
 import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.provider.Settings;
@@ -17,6 +18,8 @@ import android.view.accessibility.AccessibilityEvent;
 public final class LockAccessibilityService extends AccessibilityService {
 
     private static LockAccessibilityService instance;
+    /** 服务是否真的连着。进程没死但服务被系统禁用时，instance 会变成悬空引用。 */
+    private static volatile boolean connected;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WindowManager windowManager;
@@ -28,6 +31,7 @@ public final class LockAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
+        connected = true;
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         SharedPreferences prefs = LockPrefs.prefs(this);
@@ -47,7 +51,20 @@ public final class LockAccessibilityService extends AccessibilityService {
     }
 
     public static boolean isRunning() {
-        return instance != null;
+        return instance != null && connected;
+    }
+
+    /** 服务确实连着但盖板没显示（比如被系统清掉了窗口），需要重铺。 */
+    public static boolean isOverlayMissing() {
+        LockAccessibilityService service = instance;
+        return service != null && connected && !service.overlayShowing
+                && LockPrefs.isLocked(service)
+                && LockModes.usesAccessibility(LockPrefs.getLockMode(service));
+    }
+
+    /** 系统把服务断开时调用，把状态标记成不可用，交给守护服务去恢复。 */
+    public static void markDead() {
+        connected = false;
     }
 
     public static boolean isEnabledInSettings(Context context) {
@@ -234,6 +251,39 @@ public final class LockAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+        // 系统临时打断（比如切换用户），不代表服务被禁用，等它自己回来
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (overlayShowing && lockView != null && LockPrefs.isLocked(
+                        LockAccessibilityService.this)
+                        && LockModes.usesAccessibility(
+                        LockPrefs.getLockMode(LockAccessibilityService.this))
+                        && !isLockViewAttached()) {
+                    hideLockOverlay();
+                    showLockOverlay();
+                }
+            }
+        }, 400);
+    }
+
+    private boolean isLockViewAttached() {
+        try {
+            return lockView != null && lockView.isAttachedToWindow();
+        } catch (Exception exception) {
+            return lockView != null;
+        }
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        connected = false;
+        if (instance == this) {
+            instance = null;
+        }
+        hideLockOverlay();
+        handler.removeCallbacksAndMessages(null);
+        return super.onUnbind(intent);
     }
 
     @Override
@@ -241,6 +291,7 @@ public final class LockAccessibilityService extends AccessibilityService {
         if (instance == this) {
             instance = null;
         }
+        connected = false;
         hideLockOverlay();
         handler.removeCallbacksAndMessages(null);
         super.onDestroy();
