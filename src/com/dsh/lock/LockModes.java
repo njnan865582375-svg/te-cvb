@@ -8,6 +8,7 @@ public final class LockModes {
     public static final int ROOT = 3;
     public static final int OVERLAY = 4;
     public static final int KIOSK = 5;
+    public static final int KIOSK_STRONG = 6;
 
     private LockModes() {
     }
@@ -26,6 +27,8 @@ public final class LockModes {
                 return "悬浮窗锁机";
             case KIOSK:
                 return "设备所有者锁机";
+            case KIOSK_STRONG:
+                return "设备所有者锁机（强力）";
             default:
                 return "未选择";
         }
@@ -45,6 +48,8 @@ public final class LockModes {
                 return "用系统悬浮窗覆盖桌面；需要悬浮窗权限";
             case KIOSK:
                 return "官方 kiosk：防 Home/最近任务/通知栏/卸载，重启后恢复；需要恢复出厂+ADB 设为设备所有者";
+            case KIOSK_STRONG:
+                return "强力 kiosk：再禁安全模式/恢复出厂/ADB/未知来源安装；忘了密码只能 ADB/fastboot；仅测试机";
             default:
                 return "";
         }
@@ -55,6 +60,6 @@ public final class LockModes {
     }
 
     public static boolean isValid(int mode) {
-        return mode >= NORMAL && mode <= KIOSK;
+        return mode >= NORMAL && mode <= KIOSK_STRONG;
     }
 }

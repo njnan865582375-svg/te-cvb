@@ -67,6 +67,9 @@ public final class ModePickerActivity extends Activity {
         addRow(list, LockModes.KIOSK, "设备所有者锁机",
                 "官方 kiosk：防 Home/最近任务/通知栏/卸载；需恢复出厂+ADB 配置",
                 KioskController.isDeviceOwner(this) ? "已配置" : "未配置");
+        addRow(list, LockModes.KIOSK_STRONG, "设备所有者锁机（强力）",
+                "再禁安全模式/恢复出厂/ADB/未知来源安装；忘密码只能 ADB/fastboot；仅测试机",
+                KioskController.isDeviceOwner(this) ? "已配置" : "未配置");
 
         LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);

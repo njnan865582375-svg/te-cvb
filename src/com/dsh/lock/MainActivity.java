@@ -131,8 +131,9 @@ public final class MainActivity extends Activity {
             }
             lockView.showLockedImmediately();
             applyLockedUi();
-            if (savedMode == LockModes.KIOSK && KioskController.isDeviceOwner(this)) {
-                KioskController.enter(this);
+            if ((savedMode == LockModes.KIOSK || savedMode == LockModes.KIOSK_STRONG)
+                    && KioskController.isDeviceOwner(this)) {
+                KioskController.enter(this, savedMode == LockModes.KIOSK_STRONG);
             }
         } else {
             applyUnlockedUi();
@@ -379,20 +380,24 @@ public final class MainActivity extends Activity {
             } else {
                 requestOverlay(mode);
             }
-        } else if (mode == LockModes.KIOSK) {
+        } else if (mode == LockModes.KIOSK || mode == LockModes.KIOSK_STRONG) {
             startKioskLock(mode);
         }
     }
 
     private void startKioskLock(final int mode) {
+        final boolean strong = mode == LockModes.KIOSK_STRONG;
         if (!KioskController.isDeviceOwner(this)) {
             AppDialogs.message(this, "设备所有者锁机",
                     "这个模式需要先把 TE cvb 设为设备所有者。\n\n步骤：\n1. 备份并恢复出厂设置\n2. 安装 TE cvb，不要登录账号\n3. 用电脑执行：\n\nadb shell dpm set-device-owner com.dsh.lock/.AdminReceiver\n\n成功后再回来选这个模式。\n\n退出/卸载需要 ADB：\nadb shell dpm remove-active-admin com.dsh.lock/.AdminReceiver",
                     "知道了");
             return;
         }
-        AppDialogs.confirm(this, "设备所有者锁机",
-                "开启后会：\n\n• 把 TE cvb 设为桌面\n• 禁用状态栏和通知栏\n• 锁定 Home / 最近任务\n• 阻止卸载\n• 只允许 TE cvb 的无障碍服务\n• 禁止截屏/录屏\n• 重启后继续锁\n\n退出只能输入密码；卸载需要 ADB 取消设备所有者。确认开启？",
+        String warning = strong
+                ? "强力模式会：\n\n• 禁安全模式\n• 禁恢复出厂\n• 禁 ADB 调试\n• 禁未知来源安装\n• 禁 USB 文件传输\n• 再加上普通 kiosk 的全部限制\n\n忘记密码只能靠 ADB/fastboot 处理，主力机不要用。确认开启？"
+                : "开启后会：\n\n• 把 TE cvb 设为桌面\n• 禁用状态栏和通知栏\n• 锁定 Home / 最近任务\n• 阻止卸载\n• 只允许 TE cvb 的无障碍服务\n• 禁止截屏/录屏\n• 重启后继续锁\n\n退出只能输入密码；卸载需要 ADB 取消设备所有者。确认开启？";
+        AppDialogs.confirm(this, strong ? "设备所有者锁机（强力）" : "设备所有者锁机",
+                warning,
                 "取消", "开启锁机", new AppDialogs.OnClick() {
                     @Override
                     public void onClick() {
@@ -403,7 +408,7 @@ public final class MainActivity extends Activity {
                         LockPrefs.setLocked(MainActivity.this, true, mode);
                         lockView.enterLock();
                         applyLockedUi();
-                        if (!KioskController.enter(MainActivity.this)) {
+                        if (!KioskController.enter(MainActivity.this, strong)) {
                             KioskController.exit(MainActivity.this);
                             locked = false;
                             LockPrefs.clearLock(MainActivity.this);
@@ -607,7 +612,7 @@ public final class MainActivity extends Activity {
 
     private void finishUnlock() {
         int mode = LockPrefs.getLockMode(this);
-        if (mode == LockModes.KIOSK) {
+        if (mode == LockModes.KIOSK || mode == LockModes.KIOSK_STRONG) {
             KioskController.exit(this);
         }
         final int shellMode = LockPrefs.getShellMode(this);

@@ -22,6 +22,7 @@ public final class LockPrefs {
     private static final String KEY_SHELL_POLICY = "shell_policy";
     private static final String KEY_SHELL_ROTATION = "shell_rotation";
     private static final String KEY_SHELL_DISPLAY_ACTIVE = "shell_display_active";
+    private static final String KEY_STRONG_ADB = "strong_adb";
 
     private LockPrefs() {
     }
@@ -119,6 +120,18 @@ public final class LockPrefs {
 
     public static void setFloatingEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_FLOATING, enabled).apply();
+    }
+
+    public static int getStrongAdb(Context context) {
+        return prefs(context).getInt(KEY_STRONG_ADB, -1);
+    }
+
+    public static void setStrongAdb(Context context, int value) {
+        prefs(context).edit().putInt(KEY_STRONG_ADB, value).apply();
+    }
+
+    public static void clearStrongAdb(Context context) {
+        prefs(context).edit().remove(KEY_STRONG_ADB).apply();
     }
 
     public static String getShellHome(Context context) {

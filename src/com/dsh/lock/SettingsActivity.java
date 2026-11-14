@@ -59,7 +59,7 @@ public final class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         TextView version = new TextView(this);
-        version.setText("TE cvb 3.4");
+        version.setText("TE cvb 3.5");
         version.setTextColor(0xFF636366);
         version.setTextSize(11);
         version.setGravity(Gravity.CENTER);
