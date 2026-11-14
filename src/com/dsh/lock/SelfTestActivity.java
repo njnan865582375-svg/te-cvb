@@ -17,6 +17,7 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -24,6 +25,8 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class SelfTestActivity extends Activity {
     private static final int BG = 0xFF000000;
@@ -42,6 +45,7 @@ public final class SelfTestActivity extends Activity {
     private final StringBuilder warnings = new StringBuilder();
     private int passed;
     private int total;
+    private final List<CheckBox> manualChecks = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +107,23 @@ public final class SelfTestActivity extends Activity {
         manual.setTextSize(12.5f);
         manual.setLineSpacing(dp(2), 1f);
         manualCard.addView(manual);
+        String[] manualItems = {
+                "Home 上滑后仍锁",
+                "最近任务被挡住",
+                "下拉通知栏被收回",
+                "设置页被挡住",
+                "截屏/录屏被阻止",
+                "重启后仍恢复锁机"
+        };
+        for (String item : manualItems) {
+            CheckBox check = new CheckBox(this);
+            check.setText(item);
+            check.setTextColor(TEXT);
+            check.setTextSize(13);
+            check.setPadding(0, dp(4), 0, dp(4));
+            manualCard.addView(check);
+            manualChecks.add(check);
+        }
         content.addView(manualCard, cardParams());
 
         content.addView(buildActions());
@@ -288,6 +309,23 @@ public final class SelfTestActivity extends Activity {
                 open(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
             }
         }));
+        TextView share = action("分享报告", new Runnable() {
+            @Override
+            public void run() {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                send.putExtra(Intent.EXTRA_SUBJECT, "TE cvb 安全自测");
+                send.putExtra(Intent.EXTRA_TEXT, fullReport());
+                try {
+                    startActivity(Intent.createChooser(send, "分享安全自测报告"));
+                } catch (Exception exception) {
+                    Toast.makeText(SelfTestActivity.this, "没有可分享的应用",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        wrap.addView(share);
+
         TextView copy = action("复制报告", new Runnable() {
             @Override
             public void run() {
@@ -295,7 +333,7 @@ public final class SelfTestActivity extends Activity {
                         getSystemService(Context.CLIPBOARD_SERVICE);
                 if (clipboard != null) {
                     clipboard.setPrimaryClip(ClipData.newPlainText("TE cvb 安全自测",
-                            report.toString()));
+                            fullReport()));
                     Toast.makeText(SelfTestActivity.this, "报告已复制",
                             Toast.LENGTH_SHORT).show();
                 }
@@ -305,6 +343,16 @@ public final class SelfTestActivity extends Activity {
         copy.setBackground(roundRect(Color.WHITE, 18, 0, 0));
         wrap.addView(copy);
         return wrap;
+    }
+
+    private String fullReport() {
+        StringBuilder out = new StringBuilder(report);
+        out.append("\n手动测试：\n");
+        for (CheckBox check : manualChecks) {
+            out.append(check.isChecked() ? "[通过] " : "[未测] ")
+                    .append(check.getText()).append('\n');
+        }
+        return out.toString();
     }
 
     private TextView action(String text, final Runnable runnable) {

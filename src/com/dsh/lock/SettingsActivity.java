@@ -59,7 +59,7 @@ public final class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         TextView version = new TextView(this);
-        version.setText("TE cvb 3.6");
+        version.setText("TE cvb 3.7");
         version.setTextColor(0xFF636366);
         version.setTextSize(11);
         version.setGravity(Gravity.CENTER);
@@ -153,6 +153,24 @@ public final class SettingsActivity extends Activity {
                     @Override
                     public void onClick(View view) {
                         startActivity(new Intent(SettingsActivity.this, SelfTestActivity.class));
+                    }
+                }, true);
+
+        addTextRow("设备所有者设置", "恢复出厂 + ADB 设置向导",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        startActivity(new Intent(SettingsActivity.this,
+                                DeviceOwnerSetupActivity.class));
+                    }
+                }, true);
+
+        addTextRow("救援中心", "设备所有者 / 强力模式 / 冻结恢复",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        startActivity(new Intent(SettingsActivity.this,
+                                RecoveryActivity.class));
                     }
                 }, true);
 

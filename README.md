@@ -16,8 +16,11 @@ A black-and-white Android lock, self-discipline and kiosk app.
   - 悬浮窗锁机
   - Shizuku 锁机（自动开无障碍/悬浮窗、切桌面、冻结用户 App）
   - root 锁机（同上，使用 root）
-  - 设备所有者锁机（官方 kiosk，防 Home/最近任务/卸载）
+  - 设备所有者锁机（普通 / 强力，官方 kiosk，防 Home/最近任务/卸载）
 - 全冻结：Shizuku/root 锁机时冻结所有用户 App，解锁恢复
+- 安全自测：BL/ADB/权限/设备所有者检查、手动绕过清单、报告分享
+- 救援中心：设备所有者、强力模式、冻结 App 的 ADB 恢复命令
+- 设备所有者设置向导：恢复出厂、ADB 命令、状态检查
 - SSH/SFTP 远程锁机（实验性）
 - 社区入口
 
@@ -37,6 +40,8 @@ adb shell dpm set-device-owner com.dsh.lock/.AdminReceiver
 5. 打开 TE cvb → 模式 → 设备所有者锁机
 
 强力模式会额外限制安全模式、恢复出厂、ADB、未知来源安装；密码忘记时很难救援，只在测试机上使用。
+
+设置里的“设备所有者设置”提供向导，“救援中心”提供恢复命令。
 
 彻底移除：
 
